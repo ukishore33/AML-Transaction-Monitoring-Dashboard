@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AML Transaction Monitoring Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg:        #0a0d14;
+    --surface:   #111520;
+    --surface2:  #161c2a;
+    --border:    #1e2740;
+    --accent:    #f0a500;
+    --accent2:   #e05252;
+    --accent3:   #3ecf8e;
+    --accent4:   #5b8ef0;
+    --text:      #d4daf0;
+    --muted:     #5a6380;
+    --high:      #e05252;
+    --medium:    #f0a500;
+    --low:       #3ecf8e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .header-right {
+    display: flex; align-items: center; gap: 20px;
+  }
+  .live-badge {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--accent3);
+    letter-spacing: 1px;
+  }
+  .live-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%; background: var(--accent3);
+    animation: pulse 1.8s infinite;
+  }
+  @keyframes pulse {
+    0%,100%{opacity:1;transform:scale(1)}
+    50%{opacity:.4;transform:scale(1.4)}
+  }
+  .header-meta {
+    font-size: 12px; color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* ── LAYOUT ── */
+  .container { padding: 28px 32px; max-width: 1400px; margin: 0 auto; }
+
+  .page-title {
+    font-size: 22px; font-weight: 600;
+    margin-bottom: 4px;
+    letter-spacing: -0.3px;
+  }
+  .page-sub {
+    font-size: 13px; color: var(--muted); margin-bottom: 28px;
+  }
+  .page-sub span {
+    color: var(--accent); font-family: 'Space Mono', monospace; font-size: 11px;
+  }
+
+  /* ── KPI CARDS ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+  .kpi:hover { border-color: var(--accent); }
+  .kpi::before {
+    content: '';
+    position: absolute; top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: var(--kpi-color, var(--accent));
+  }
+  .kpi-label {
+    font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1.2px;
+    margin-bottom: 10px; font-family: 'Space Mono', monospace;
+  }
+  .kpi-value {
+    font-size: 28px; font-weight: 600;
+    font-family: 'Space Mono', monospace;
+    color: var(--kpi-color, var(--text));
+    line-height: 1;
+  }
+  .kpi-sub {
+    font-size: 11px; color: var(--muted); margin-top: 6px;
+  }
+
+  /* ── CHARTS ROW ── */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .card-title {
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-title::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+  .chart-wrap { position: relative; height: 200px; }
+
+  /* ── MODEL METRICS ── */
+  .metrics-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .metric-item {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .metric-label {
+    font-size: 11px; color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .metric-bar-wrap {
+    background: var(--surface2); border-radius: 4px; height: 6px; overflow: hidden;
+  }
+  .metric-bar {
+    height: 100%; border-radius: 4px;
+    background: var(--accent3);
+    transition: width 1s ease;
+  }
+  .metric-val {
+    font-size: 18px; font-weight: 600;
+    font-family: 'Space Mono', monospace;
+    color: var(--accent3);
+  }
+
+  /* ── FEATURE IMPORTANCE ── */
+  .feat-item {
+    display: grid;
+    grid-template-columns: 150px 1fr 50px;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .feat-name {
+    font-size: 12px; color: var(--text);
+    white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .feat-bar-wrap {
+    background: var(--surface2); border-radius: 3px; height: 5px; overflow: hidden;
+  }
+  .feat-bar {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent4), var(--accent));
+    transition: width 1.2s ease;
+  }
+  .feat-pct {
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    color: var(--muted); text-align: right;
+  }
+
+  /* ── ALERTS TABLE ── */
+  .table-wrap { overflow-x: auto; margin-top: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { border-bottom: 1px solid var(--border); }
+  th {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; font-weight: 400;
+    text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--muted);
+    padding: 10px 12px; text-align: left;
+    white-space: nowrap;
+  }
+  td { padding: 10px 12px; border-bottom: 1px solid #0f1420; }
+  tbody tr { transition: background .15s; }
+  tbody tr:hover { background: var(--surface2); }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px; border-radius: 4px;
+    font-size: 10px; font-weight: 600;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+  }
+  .badge-high   { background: rgba(224,82,82,.15);  color: var(--high); }
+  .badge-medium { background: rgba(240,165,0,.12); color: var(--medium); }
+  .badge-low    { background: rgba(62,207,142,.12); color: var(--low); }
+
+  .flag-dot {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; margin-right: 4px;
+  }
+  .flag-yes { background: var(--high); }
+  .flag-no  { background: var(--border); }
+
+  /* risk score pill */
+  .score-pill {
+    display: inline-block;
+    padding: 2px 10px; border-radius: 20px;
+    font-family: 'Space Mono', monospace; font-size: 12px;
+  }
+  .score-high   { background: rgba(224,82,82,.2);  color: var(--high); }
+  .score-medium { background: rgba(240,165,0,.15); color: var(--medium); }
+  .score-low    { background: rgba(62,207,142,.15);color: var(--low); }
+
+  /* ── FOOTER ── */
+  footer {
+    margin-top: 40px;
+    padding: 20px 32px;
+    border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+  footer span { color: var(--accent); }
+
+  /* ── FILTERS ── */
+  .filters {
+    display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;
+  }
+  .filter-label {
+    font-size: 11px; color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  select, input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    cursor: pointer;
+    transition: border-color .2s;
+  }
+  select:hover, input:hover { border-color: var(--accent); }
+  select:focus, input:focus { border-color: var(--accent); }
+  input[type=text] { min-width: 200px; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⬡ AML · Transaction Monitor</div>
+  <div class="header-right">
+    <div class="live-badge"><div class="live-dot"></div>LIVE · MONITORING ACTIVE</div>
+    <div class="header-meta" id="clock">--:--:-- IST</div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="page-title">Financial Crime Surveillance Dashboard</div>
+  <div class="page-sub">
+    Kishore U. &nbsp;·&nbsp; AML/KYC Compliance + Data Analytics &nbsp;·&nbsp;
+    <span>Model: Random Forest · AUC 1.00 · F1 1.00</span>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid">
+    <div class="kpi" style="--kpi-color:#5b8ef0">
+      <div class="kpi-label">Total Transactions</div>
+      <div class="kpi-value">2,000</div>
+      <div class="kpi-sub">Jan – Dec 2024</div>
+    </div>
+    <div class="kpi" style="--kpi-color:#e05252">
+      <div class="kpi-label">ML Alerts Raised</div>
+      <div class="kpi-value">324</div>
+      <div class="kpi-sub">16.2% alert rate</div>
+    </div>
+    <div class="kpi" style="--kpi-color:#f0a500">
+      <div class="kpi-label">High-Risk Country</div>
+      <div class="kpi-value">188</div>
+      <div class="kpi-sub">Transactions flagged</div>
+    </div>
+    <div class="kpi" style="--kpi-color:#3ecf8e">
+      <div class="kpi-label">Model Accuracy</div>
+      <div class="kpi-value">100%</div>
+      <div class="kpi-sub">F1 · Precision · Recall</div>
+    </div>
+    <div class="kpi" style="--kpi-color:#e05252">
+      <div class="kpi-label">Amount Flagged</div>
+      <div class="kpi-value">₹6.15Cr</div>
+      <div class="kpi-sub">Across 324 alerts</div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW 1 -->
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-title">Monthly Transaction Volume vs Alerts</div>
+      <div class="chart-wrap"><canvas id="monthlyChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Alerts by Transaction Type</div>
+      <div class="chart-wrap"><canvas id="typeChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Risk Tier Distribution</div>
+      <div class="chart-wrap"><canvas id="riskChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- MODEL + FEATURES -->
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">ML Model Performance · Random Forest</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="metric-item">
+          <div class="metric-val">1.00</div>
+          <div class="metric-label">ROC-AUC</div>
+          <div class="metric-bar-wrap"><div class="metric-bar" style="width:100%"></div></div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-val">1.00</div>
+          <div class="metric-label">F1 Score</div>
+          <div class="metric-bar-wrap"><div class="metric-bar" style="width:100%"></div></div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-val">1.00</div>
+          <div class="metric-label">Precision</div>
+          <div class="metric-bar-wrap"><div class="metric-bar" style="width:100%"></div></div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-val">1.00</div>
+          <div class="metric-label">Recall</div>
+          <div class="metric-bar-wrap"><div class="metric-bar" style="width:100%"></div></div>
+        </div>
+      </div>
+      <div style="margin-top:20px;">
+        <div class="card-title" style="margin-bottom:12px">Confusion Matrix</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:220px">
+          <div style="background:rgba(62,207,142,.1);border:1px solid rgba(62,207,142,.3);border-radius:6px;padding:12px;text-align:center">
+            <div style="font-family:'Space Mono',monospace;font-size:20px;color:var(--accent3)">335</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">TRUE NEG</div>
+          </div>
+          <div style="background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.3);border-radius:6px;padding:12px;text-align:center">
+            <div style="font-family:'Space Mono',monospace;font-size:20px;color:var(--high)">0</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">FALSE POS</div>
+          </div>
+          <div style="background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.3);border-radius:6px;padding:12px;text-align:center">
+            <div style="font-family:'Space Mono',monospace;font-size:20px;color:var(--high)">0</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">FALSE NEG</div>
+          </div>
+          <div style="background:rgba(62,207,142,.1);border:1px solid rgba(62,207,142,.3);border-radius:6px;padding:12px;text-align:center">
+            <div style="font-family:'Space Mono',monospace;font-size:20px;color:var(--accent3)">65</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">TRUE POS</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Feature Importance · Top Drivers</div>
+      <div id="featureList"></div>
+    </div>
+  </div>
+
+  <!-- COUNTRY + TYPE -->
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Alerts by Country</div>
+      <div class="chart-wrap"><canvas id="countryChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">AML Red-Flag Breakdown</div>
+      <div id="flagBreakdown" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- ALERT TABLE -->
+  <div class="card">
+    <div class="card-title">SAR Alert Queue · Top 50 Flagged Transactions</div>
+    <div class="filters">
+      <span class="filter-label">Filter:</span>
+      <select id="riskFilter" onchange="filterTable()">
+        <option value="">All Risk Tiers</option>
+        <option value="High">High Risk</option>
+        <option value="Medium">Medium Risk</option>
+        <option value="Low">Low Risk</option>
+      </select>
+      <select id="countryFilter" onchange="filterTable()">
+        <option value="">All Countries</option>
+        <option value="High">High-Risk Countries Only</option>
+        <option value="Low">Low-Risk Countries</option>
+      </select>
+      <select id="typeFilter" onchange="filterTable()">
+        <option value="">All Types</option>
+        <option>Wire Transfer</option>
+        <option>Cash Deposit</option>
+        <option>Cash Withdrawal</option>
+        <option>SWIFT</option>
+        <option>NEFT</option>
+        <option>RTGS</option>
+        <option>Crypto Exchange</option>
+      </select>
+      <input type="text" id="searchInput" placeholder="Search customer / txn ID…" oninput="filterTable()"/>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Txn ID</th><th>Customer</th><th>Date</th><th>Type</th>
+            <th>Amount (₹)</th><th>Country</th><th>Risk Tier</th>
+            <th>ML Score</th><th>PEP</th><th>Sanctions</th><th>Shell Co.</th>
+          </tr>
+        </thead>
+        <tbody id="alertTable"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--muted);font-family:'Space Mono',monospace" id="rowCount"></div>
+  </div>
+</div>
+
+<footer>
+  <div>AML Transaction Monitoring Dashboard · <span>Kishore U.</span> · AML/KYC + Data Analytics</div>
+  <div>Built with Python · scikit-learn · Chart.js · Synthetic Data (2,000 txns)</div>
+</footer>
+
+<script>
+// ── DATA ──
+const monthly = [
+  {month:"Jan",total:159,flagged:25},{month:"Feb",total:155,flagged:22},
+  {month:"Mar",total:171,flagged:29},{month:"Apr",total:163,flagged:27},
+  {month:"May",total:168,flagged:28},{month:"Jun",total:158,flagged:24},
+  {month:"Jul",total:169,flagged:28},{month:"Aug",total:172,flagged:31},
+  {month:"Sep",total:160,flagged:25},{month:"Oct",total:175,flagged:30},
+  {month:"Nov",total:162,flagged:26},{month:"Dec",total:188,flagged:29}
+];
+const byType = [
+  {txn_type:"Wire Transfer",count:62},{txn_type:"Cash Deposit",count:55},
+  {txn_type:"SWIFT",count:50},{txn_type:"Crypto Exchange",count:47},
+  {txn_type:"Cash Withdrawal",count:43},{txn_type:"RTGS",count:37},
+  {txn_type:"NEFT",count:30}
+];
+const byCountry = [
+  {country:"Iran",count:48},{country:"Myanmar",count:38},{country:"Somalia",count:36},
+  {country:"USA",count:33},{country:"Syria",count:31},{country:"North Korea",count:28},
+  {country:"India",count:62},{country:"Yemen",count:7}
+];
+const features = [
+  {feature:"velocity_24h",importance:0.3966},
+  {feature:"combined_alert_score",importance:0.1964},
+  {feature:"country_risk_enc",importance:0.1338},
+  {feature:"amount_log",importance:0.1211},
+  {feature:"high_value_flag",importance:0.0476},
+  {feature:"multi_account_flag",importance:0.026},
+  {feature:"shell_company_flag",importance:0.0253},
+  {feature:"pep_flag",importance:0.0139},
+  {feature:"structuring_flag",importance:0.0119},
+  {feature:"sanctions_flag",importance:0.0106},
+];
+const flaggedTxns = Array.from({length:50},(_,i)=>({
+  txn_id:`TXN${String(i+1).padStart(6,'0')}`,
+  customer_id:`CUST${1000+Math.floor(Math.random()*500)}`,
+  date:`2024-${String(1+i%12).padStart(2,'0')}-${String(1+i%28).padStart(2,'0')}`,
+  txn_type:["Wire Transfer","Cash Deposit","SWIFT","Crypto Exchange","Cash Withdrawal","RTGS","NEFT"][i%7],
+  amount_inr: i%3===0 ? 7500+i*100 : 50000+i*8000,
+  country:["Iran","Myanmar","USA","Somalia","India","Syria","North Korea","Germany"][i%8],
+  country_risk:i%3===0?"High":"Low",
+  risk_tier: i%5===4?"Medium":(i%3===0||i%3===1)?"High":"Low",
+  ml_risk_score: i%5===4?45:(i%3===0||i%3===1)?78+i%15:12+i%20,
+  pep_flag: i%7===0?1:0,
+  sanctions_flag: i%9===0?1:0,
+  shell_company_flag: i%5===0?1:0,
+}));
+
+// ── CLOCK ──
+function updateClock(){
+  const now=new Date();
+  document.getElementById('clock').textContent=
+    now.toLocaleTimeString('en-IN',{timeZone:'Asia/Kolkata',hour12:false})+' IST';
+}
+setInterval(updateClock,1000); updateClock();
+
+// ── CHART DEFAULTS ──
+Chart.defaults.color='#5a6380';
+Chart.defaults.borderColor='#1e2740';
+Chart.defaults.font.family="'DM Sans',sans-serif";
+
+// Monthly
+new Chart(document.getElementById('monthlyChart'),{
+  type:'bar',
+  data:{
+    labels:monthly.map(d=>d.month),
+    datasets:[
+      {label:'Total',data:monthly.map(d=>d.total),
+       backgroundColor:'rgba(91,142,240,.2)',borderColor:'rgba(91,142,240,.8)',
+       borderWidth:1,borderRadius:3},
+      {label:'Flagged',data:monthly.map(d=>d.flagged),
+       backgroundColor:'rgba(224,82,82,.7)',borderColor:'rgba(224,82,82,1)',
+       borderWidth:1,borderRadius:3},
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{font:{size:11}}}},
+    scales:{x:{grid:{display:false}},y:{grid:{color:'#1e2740'}}}
+  }
+});
+
+// Type doughnut
+new Chart(document.getElementById('typeChart'),{
+  type:'doughnut',
+  data:{
+    labels:byType.map(d=>d.txn_type),
+    datasets:[{
+      data:byType.map(d=>d.count),
+      backgroundColor:['#5b8ef0','#e05252','#f0a500','#3ecf8e','#9b6fd4','#e07a52','#52c5e0'],
+      borderWidth:0,
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10,padding:8}}}
+  }
+});
+
+// Risk tier doughnut
+new Chart(document.getElementById('riskChart'),{
+  type:'doughnut',
+  data:{
+    labels:['High','Medium','Low'],
+    datasets:[{
+      data:[323,1,1676],
+      backgroundColor:['rgba(224,82,82,.8)','rgba(240,165,0,.8)','rgba(62,207,142,.8)'],
+      borderWidth:0
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:10,padding:8}}}
+  }
+});
+
+// Country bar
+new Chart(document.getElementById('countryChart'),{
+  type:'bar',
+  data:{
+    labels:byCountry.map(d=>d.country),
+    datasets:[{
+      label:'Alerts',
+      data:byCountry.map(d=>d.count),
+      backgroundColor:byCountry.map(d=>
+        ['Iran','Myanmar','Somalia','Syria','North Korea','Yemen'].includes(d.country)
+          ?'rgba(224,82,82,.8)':'rgba(91,142,240,.7)'),
+      borderRadius:4,borderWidth:0
+    }]
+  },
+  options:{
+    indexAxis:'y',
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{x:{grid:{color:'#1e2740'}},y:{grid:{display:false}}}
+  }
+});
+
+// Feature importance
+const featDiv = document.getElementById('featureList');
+const maxImp = features[0].importance;
+const labelMap = {
+  velocity_24h:'Transaction Velocity',
+  combined_alert_score:'Combined Alert Score',
+  country_risk_enc:'Country Risk Level',
+  amount_log:'Transaction Amount',
+  high_value_flag:'High Value Flag',
+  multi_account_flag:'Multi-Account Flag',
+  shell_company_flag:'Shell Company Flag',
+  pep_flag:'PEP Flag',
+  structuring_flag:'Structuring Pattern',
+  sanctions_flag:'Sanctions Flag'
+};
+features.forEach(f=>{
+  const pct=(f.importance/maxImp*100).toFixed(0);
+  featDiv.innerHTML+=`
+  <div class="feat-item">
+    <div class="feat-name">${labelMap[f.feature]||f.feature}</div>
+    <div class="feat-bar-wrap"><div class="feat-bar" style="width:${pct}%"></div></div>
+    <div class="feat-pct">${(f.importance*100).toFixed(1)}%</div>
+  </div>`;
+});
+
+// Flag breakdown
+const flagData = [
+  {label:'PEP Matched',count:47,color:'#e05252'},
+  {label:'Sanctions Hit',count:36,color:'#f0a500'},
+  {label:'Shell Company',count:65,color:'#9b6fd4'},
+  {label:'Multi-Account',count:79,color:'#5b8ef0'},
+  {label:'Structuring',count:112,color:'#52c5e0'},
+  {label:'High-Risk Country',count:188,color:'#3ecf8e'},
+];
+const maxFlag=188;
+const flagDiv=document.getElementById('flagBreakdown');
+flagData.forEach(f=>{
+  flagDiv.innerHTML+=`
+  <div style="margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+      <span style="font-size:12px">${f.label}</span>
+      <span style="font-family:'Space Mono',monospace;font-size:11px;color:${f.color}">${f.count}</span>
+    </div>
+    <div style="background:var(--surface2);border-radius:3px;height:5px;overflow:hidden">
+      <div style="width:${(f.count/maxFlag*100).toFixed(0)}%;height:100%;background:${f.color};border-radius:3px;transition:width 1.2s ease"></div>
+    </div>
+  </div>`;
+});
+
+// ── TABLE ──
+let tableData=[...flaggedTxns];
+function filterTable(){
+  const risk=document.getElementById('riskFilter').value;
+  const country=document.getElementById('countryFilter').value;
+  const type=document.getElementById('typeFilter').value;
+  const search=document.getElementById('searchInput').value.toLowerCase();
+  let filtered=flaggedTxns.filter(r=>{
+    if(risk && r.risk_tier!==risk) return false;
+    if(country==='High' && r.country_risk!=='High') return false;
+    if(country==='Low' && r.country_risk!=='Low') return false;
+    if(type && r.txn_type!==type) return false;
+    if(search && !r.txn_id.toLowerCase().includes(search) && !r.customer_id.toLowerCase().includes(search)) return false;
+    return true;
+  });
+  renderTable(filtered);
+}
+
+function renderTable(data){
+  const tbody=document.getElementById('alertTable');
+  tbody.innerHTML='';
+  data.forEach(r=>{
+    const sc=r.ml_risk_score;
+    const scClass=sc>=70?'score-high':sc>=40?'score-medium':'score-low';
+    const tierClass=r.risk_tier==='High'?'badge-high':r.risk_tier==='Medium'?'badge-medium':'badge-low';
+    tbody.innerHTML+=`
+    <tr>
+      <td style="font-family:'Space Mono',monospace;font-size:11px;color:var(--accent4)">${r.txn_id}</td>
+      <td style="font-family:'Space Mono',monospace;font-size:11px">${r.customer_id}</td>
+      <td style="color:var(--muted)">${r.date}</td>
+      <td>${r.txn_type}</td>
+      <td style="font-family:'Space Mono',monospace;text-align:right">₹${Number(r.amount_inr).toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
+      <td>${r.country} ${r.country_risk==='High'?'<span style="color:var(--high);font-size:10px">⚠</span>':''}</td>
+      <td><span class="badge ${tierClass}">${r.risk_tier}</span></td>
+      <td><span class="score-pill ${scClass}">${sc}</span></td>
+      <td><span class="flag-dot ${r.pep_flag?'flag-yes':'flag-no'}"></span>${r.pep_flag?'Yes':'—'}</td>
+      <td><span class="flag-dot ${r.sanctions_flag?'flag-yes':'flag-no'}"></span>${r.sanctions_flag?'Yes':'—'}</td>
+      <td><span class="flag-dot ${r.shell_company_flag?'flag-yes':'flag-no'}"></span>${r.shell_company_flag?'Yes':'—'}</td>
+    </tr>`;
+  });
+  document.getElementById('rowCount').textContent=`Showing ${data.length} of ${flaggedTxns.length} alerts`;
+}
+renderTable(flaggedTxns);
+</script>
+</body>
+</html>
