@@ -133,8 +133,8 @@ open aml_dashboard.html   # macOS
 
 **Kishore U.**  
 AML/KYC Compliance Analyst · Data Analytics  
-📧 [your email] · 📱 6303308133  
-🔗 [LinkedIn] · [GitHub]
+📧 UKISHORE33@GMAIL.COM · 📱 6303308133  
+🔗 [LinkedIn](WWW.LINKEDIN.COM/IN/KISHORE-TECHIE/)
 
 **Skills demonstrated:** AML | KYC/KYB | Sanctions Screening | Transaction Monitoring | Python | scikit-learn | SQL | Data Visualization | Financial Crime Compliance
 
