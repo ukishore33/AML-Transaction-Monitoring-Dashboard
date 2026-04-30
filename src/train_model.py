@@ -8,6 +8,7 @@ Description: Trains Random Forest + Logistic Regression for SAR prediction
 import pandas as pd
 import numpy as np
 import json
+from pathlib import Path
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
@@ -17,8 +18,15 @@ from sklearn.metrics import (
     roc_auc_score, precision_score, recall_score, f1_score
 )
 
+BASE_DIR = Path(__file__).resolve().parents[1]
+DATA_DIR = BASE_DIR / "data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+TRANSACTIONS_CSV = DATA_DIR / "transactions.csv"
+TRANSACTIONS_SCORED_CSV = DATA_DIR / "transactions_scored.csv"
+MODEL_RESULTS_JSON = DATA_DIR / "model_results.json"
+
 def train_model():
-    df = pd.read_csv("/home/claude/aml_dashboard/transactions.csv")
+    df = pd.read_csv(TRANSACTIONS_CSV)
 
     # Feature engineering
     le = LabelEncoder()
@@ -101,7 +109,7 @@ def train_model():
     df["risk_tier"] = df["ml_risk_score"].apply(tier)
 
     # Save enriched data
-    df.to_csv("/home/claude/aml_dashboard/transactions_scored.csv", index=False)
+    df.to_csv(TRANSACTIONS_SCORED_CSV, index=False)
 
     # Save metrics JSON
     output = {
@@ -120,7 +128,7 @@ def train_model():
         }
     }
 
-    with open("/home/claude/aml_dashboard/model_results.json", "w") as f:
+    with open(MODEL_RESULTS_JSON, "w") as f:
         json.dump(output, f, indent=2)
 
     print("✅ Model training complete!")

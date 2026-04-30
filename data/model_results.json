@@ -1,0 +1,96 @@
+{
+  "metrics": {
+    "random_forest": {
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "roc_auc": 1.0
+    },
+    "logistic_regression": {
+      "accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "roc_auc": 1.0
+    }
+  },
+  "feature_importance": [
+    {
+      "feature": "velocity_24h",
+      "importance": 0.3956
+    },
+    {
+      "feature": "combined_alert_score",
+      "importance": 0.1964
+    },
+    {
+      "feature": "country_risk_enc",
+      "importance": 0.1345
+    },
+    {
+      "feature": "amount_log",
+      "importance": 0.1215
+    },
+    {
+      "feature": "high_value_flag",
+      "importance": 0.0476
+    },
+    {
+      "feature": "multi_account_flag",
+      "importance": 0.026
+    },
+    {
+      "feature": "shell_company_flag",
+      "importance": 0.0253
+    },
+    {
+      "feature": "pep_flag",
+      "importance": 0.0139
+    },
+    {
+      "feature": "structuring_flag",
+      "importance": 0.0119
+    },
+    {
+      "feature": "sanctions_flag",
+      "importance": 0.0106
+    },
+    {
+      "feature": "txn_type_enc",
+      "importance": 0.0051
+    },
+    {
+      "feature": "industry_enc",
+      "importance": 0.0045
+    },
+    {
+      "feature": "is_round_number",
+      "importance": 0.0044
+    },
+    {
+      "feature": "segment_enc",
+      "importance": 0.0029
+    }
+  ],
+  "confusion_matrix": [
+    [
+      335,
+      0
+    ],
+    [
+      0,
+      65
+    ]
+  ],
+  "dataset_summary": {
+    "total_transactions": 2000,
+    "total_suspicious": 326,
+    "ml_alerts_raised": 324,
+    "high_risk_count": 323,
+    "medium_risk_count": 1,
+    "low_risk_count": 1676,
+    "high_risk_countries_txns": 188,
+    "total_amount_flagged": 61500324.17
+  }
+}

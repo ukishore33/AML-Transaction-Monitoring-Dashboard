@@ -7,7 +7,13 @@ Description: Generates realistic synthetic transaction data with AML red flags
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
+from pathlib import Path
 import random
+
+BASE_DIR = Path(__file__).resolve().parents[1]
+DATA_DIR = BASE_DIR / "data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+TRANSACTIONS_CSV = DATA_DIR / "transactions.csv"
 
 np.random.seed(42)
 random.seed(42)
@@ -104,8 +110,9 @@ def generate_transactions(n=2000):
         })
 
     df = pd.DataFrame(records)
-    df.to_csv("/home/claude/aml_dashboard/transactions.csv", index=False)
+    df.to_csv(TRANSACTIONS_CSV, index=False)
     print(f"✅ Generated {n} transactions | Suspicious: {df['sar_label'].sum()} ({df['sar_label'].mean()*100:.1f}%)")
+    print(f"   Saved dataset: {TRANSACTIONS_CSV}")
     return df
 
 if __name__ == "__main__":
